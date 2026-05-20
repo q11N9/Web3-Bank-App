@@ -1,0 +1,23 @@
+{
+  "name": "bank-dapp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^7.0.0",
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^3.0.5",
+    "@types/node": "^22.19.19",
+    "hardhat": "^3.4.5",
+    "typescript": "~5.8.0"
+  },
+  "dependencies": {
+    "dotenv": "^17.4.2"
+  },
+  "type": "module"
+}
