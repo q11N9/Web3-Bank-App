@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ethers } from "ethers";
 
 import BankArtifact from "./abi/Bank.json";
@@ -12,10 +12,13 @@ function App() {
   const [amount, setAmount] = useState("");
   const [txHash, setTxHash] = useState("");
   const [status, setStatus] = useState("");
+  const [bankBalanceWei, setBankBalanceWei] = useState(0n);
 
+  const [transferTo, setTransferTo] = useState("");
+  const [transferAmount, setTransferAmount] = useState("");
   async function getProvider() {
     if (!window.ethereum) {
-      throw new Error("MetaMask is not installed");
+      throw new Error("MetaMask chưa được cài đặt");
     }
 
     return new ethers.BrowserProvider(window.ethereum);
@@ -60,14 +63,24 @@ function App() {
       if (!address) return;
 
       const provider = await getProvider();
-      const contract = await getContract();
+      const signer = await provider.getSigner();
 
-      const walletWei = await provider.getBalance(address);
+      const currentAddress = address || await signer.getAddress();
+
+      const contract = new ethers.Contract(
+        contractAddress.Bank,
+        BankArtifact.abi,
+        signer
+      );
+
+      const walletWei = await provider.getBalance(currentAddress);
       const bankWei = await contract.getMyBalance();
       const contractWei = await contract.getContractBalance();
 
+      setAccount(currentAddress);
       setWalletBalance(ethers.formatEther(walletWei));
       setBankBalance(ethers.formatEther(bankWei));
+      setBankBalanceWei(bankWei);
       setContractBalance(ethers.formatEther(contractWei));
     } catch (error) {
       console.error(error);
@@ -78,11 +91,11 @@ function App() {
   async function deposit() {
     try {
       if (!amount || Number(amount) <= 0) {
-        setStatus("Please enter a valid amount");
+        setStatus("Hãy điền vào số tiền gửi thích hợp");
         return;
       }
 
-      setStatus("Waiting for MetaMask confirmation...");
+      setStatus("Đợi chấp nhận từ Metamask...");
 
       const contract = await getContract();
 
@@ -91,11 +104,11 @@ function App() {
       });
 
       setTxHash(tx.hash);
-      setStatus("Transaction sent. Waiting for confirmation...");
+      setStatus("Giao dịch đã được gửi. Đang chờ chấp thuận...");
 
       await tx.wait();
 
-      setStatus("Deposit successful");
+      setStatus("Gửi tiền thành công");
       setAmount("");
 
       await loadBalances();
@@ -107,32 +120,138 @@ function App() {
 
   async function withdraw() {
     try {
-      if (!amount || Number(amount) <= 0) {
-        setStatus("Please enter a valid amount");
+      setStatus("");
+
+      if (!account) {
+        setStatus("Vui lòng kết nối ví MetaMask trước.");
         return;
       }
 
-      setStatus("Waiting for MetaMask confirmation...");
+      if (!amount || Number(amount) <= 0) {
+        setStatus("Vui lòng nhập số ETH muốn rút lớn hơn 0.");
+        return;
+      }
+
+      const withdrawWei = ethers.parseEther(amount);
+
+      if (withdrawWei > bankBalanceWei) {
+        setStatus(
+          `Số dư trong Bank không đủ. Bạn hiện chỉ có ${bankBalance} ETH trong Bank contract.`
+        );
+        return;
+      }
 
       const contract = await getContract();
 
-      const tx = await contract.withdraw(ethers.parseEther(amount));
+      setStatus("Đang chờ xác nhận giao dịch trên MetaMask...");
+
+      const tx = await contract.withdraw(withdrawWei);
 
       setTxHash(tx.hash);
-      setStatus("Transaction sent. Waiting for confirmation...");
+      setStatus("Giao dịch đã được gửi. Đang chờ xác nhận...");
 
       await tx.wait();
 
-      setStatus("Withdraw successful");
-      setAmount("");
-
+      setStatus("Rút tiền thành công");
       await loadBalances();
     } catch (error) {
       console.error(error);
-      setStatus(error.reason || error.message);
+
+      if (error.code === "ACTION_REJECTED") {
+        setStatus("Người dùng đã từ chối giao dịch trên MetaMask.");
+      } else {
+        setStatus("Rút tiền thất bại. Vui lòng kiểm tra lại giao dịch.");
+      }
+    }
+  } 
+
+  async function transferInternal() {
+  try {
+    setStatus("");
+
+    // Kiểm tra đầu vào cơ bản từ giao diện
+    if (!account) {
+      setStatus("Vui lòng kết nối ví MetaMask trước.");
+      return;
+    }
+    if (!transferTo || !ethers.isAddress(transferTo)) {
+      setStatus("Địa chỉ ví người nhận không hợp lệ.");
+      return;
+    }
+    if (!transferAmount || Number(transferAmount) <= 0) {
+      setStatus("Vui lòng nhập số ETH muốn chuyển lớn hơn 0.");
+      return;
+    }
+
+    const transferWei = ethers.parseEther(transferAmount);
+
+    // Chặn từ giao diện nếu số dư không đủ
+    if (transferWei > bankBalanceWei) {
+      setStatus(`Số dư không đủ. Bạn chỉ có ${bankBalance} ETH.`);
+      return;
+    }
+
+    const contract = await getContract();
+    setStatus("Đang chờ xác nhận giao dịch chuyển tiền...");
+
+    // Gọi hàm transfer trong Smart Contract
+    const tx = await contract.transfer(transferTo, transferWei);
+    
+    setTxHash(tx.hash);
+    setStatus("Giao dịch đã gửi. Đang chờ mạng lưới xác nhận...");
+
+    await tx.wait();
+
+    setStatus("Chuyển tiền nội bộ thành công!");
+    setTransferTo("");
+    setTransferAmount("");
+    
+    // Cập nhật lại số dư trên màn hình
+    await loadBalances();
+    } catch (error) {
+      console.error(error);
+      // if (error.code === "ACTION_REJECTED") {
+      //   setStatus("Người dùng đã hủy giao dịch.");
+      // } else {
+      //   setStatus("Chuyển tiền thất bại. Vui lòng kiểm tra lại.");
+      // }
+      //Debug line
+      setStatus(
+        error.reason ||
+        error.shortMessage ||
+        error.message ||
+        JSON.stringify(error)
+      );
     }
   }
 
+  useEffect(() => {
+  if (!window.ethereum) return;
+
+  const handleAccountsChanged = async (accounts) => {
+    if (accounts.length === 0) {
+      setAccount("");
+      setWalletBalance("0");
+      setBankBalance("0");
+      setContractBalance("0");
+      setStatus("Ví MetaMask đã ngắt kết nối.");
+      return;
+    }
+
+    const newAccount = accounts[0];
+
+    setAccount(newAccount);
+    setStatus("Đã chuyển tài khoản MetaMask.");
+
+    await loadBalances(newAccount);
+  };
+
+  window.ethereum.on("accountsChanged", handleAccountsChanged);
+
+  return () => {
+    window.ethereum.removeListener("accountsChanged", handleAccountsChanged);
+  };
+}, []);
   return (
     <div style={{ maxWidth: "700px", margin: "40px auto", fontFamily: "Arial" }}>
       <h1>Bank dApp</h1>
@@ -166,7 +285,7 @@ function App() {
 
       <hr />
 
-      <input
+      {/* <input
         type="text"
         placeholder="Amount in ETH"
         value={amount}
@@ -177,10 +296,50 @@ function App() {
       <button onClick={deposit}>Deposit</button>
       <button onClick={withdraw} style={{ marginLeft: "8px" }}>
         Withdraw
-      </button>
+      </button> */}
+
+
+      {/* KHU VỰC NẠP / RÚT TIỀN */}
+      <h3>Deposit / Withdraw</h3>
+      <div style={{ marginBottom: "20px" }}>
+        <input
+          type="text"
+          placeholder="Amount in ETH"
+          value={amount}
+          onChange={(e) => setAmount(e.target.value)}
+          style={{ padding: "8px", marginRight: "8px" }}
+        />
+        <button onClick={deposit}>Deposit</button>
+        <button onClick={withdraw} style={{ marginLeft: "8px" }}>
+          Withdraw
+        </button>
+      </div>
+
+      {/* KHU VỰC CHUYỂN TIỀN NỘI BỘ (MỚI THÊM) */}
+      <h3>Internal Transfer</h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxWidth: "350px", marginBottom: "20px" }}>
+        <input
+          type="text"
+          placeholder="Recipient Address (0x...)"
+          value={transferTo}
+          onChange={(e) => setTransferTo(e.target.value)}
+          style={{ padding: "8px" }}
+        />
+        <input
+          type="text"
+          placeholder="Amount in ETH"
+          value={transferAmount}
+          onChange={(e) => setTransferAmount(e.target.value)}
+          style={{ padding: "8px" }}
+        />
+        <button onClick={transferInternal} style={{ padding: "8px" }}>
+          Transfer Now
+        </button>
+      </div>
+
 
       <hr />
-
+      
       <p>
         <strong>Status:</strong> {status}
       </p>
@@ -190,6 +349,8 @@ function App() {
           <strong>Last transaction:</strong> {txHash}
         </p>
       )}
+
+
     </div>
   );
 }

@@ -6,6 +6,8 @@ contract Bank {
 
     event Deposited(address indexed user, uint256 amount);
     event Withdrawn(address indexed user, uint256 amount);
+    
+    event Transferred(address indexed from, address indexed to, uint256 amount);
 
     function deposit() external payable {
         require(msg.value > 0, "Deposit amount must be greater than 0");
@@ -24,6 +26,19 @@ contract Bank {
         payable(msg.sender).transfer(amount);
 
         emit Withdrawn(msg.sender, amount);
+    }
+
+    function transfer(address to, uint256 amount) external {
+
+        require(to != address(0), "Cannot transfer to the zero address");
+        require(to != msg.sender, "Cannot transfer to yourself");
+        require(amount > 0, "Transfer amount must be greater than 0");
+        
+        require(balances[msg.sender] >= amount, "Insufficient balance");
+        balances[msg.sender] -= amount;
+
+        balances[to] += amount;
+        emit Transferred(msg.sender, to, amount);
     }
 
     function getMyBalance() external view returns (uint256) {
