@@ -1,1 +1,8 @@
 Bank deployed to: 0xEe53774c5037A3821EfdfD7054AD3092b843c5D8
+
+npx hardhat compile
+npx hardhat run scripts/deploy.js --network ganache
+cp artifacts/contracts/Bank.sol/Bank.json frontend/src/abi/Bank.json
+
+cd frontend
+npm run dev -- --host 0.0.0.0

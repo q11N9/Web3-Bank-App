@@ -25,7 +25,7 @@ function App() {
   }
 
   async function getContract() {
-    const provider = await getProvider();
+    const provider = await getProvider();           
     const signer = await provider.getSigner();
 
     return new ethers.Contract(
@@ -37,7 +37,7 @@ function App() {
 
   async function connectWallet() {
     try {
-      setStatus("Connecting wallet...");
+      setStatus("Đang kết nối tới ví...");
 
       const provider = await getProvider();
 
@@ -210,18 +210,18 @@ function App() {
     await loadBalances();
     } catch (error) {
       console.error(error);
-      // if (error.code === "ACTION_REJECTED") {
-      //   setStatus("Người dùng đã hủy giao dịch.");
-      // } else {
-      //   setStatus("Chuyển tiền thất bại. Vui lòng kiểm tra lại.");
-      // }
+      if (error.code === "ACTION_REJECTED") {
+        setStatus("Người dùng đã hủy giao dịch.");
+      } else {
+        setStatus("Chuyển tiền thất bại. Vui lòng kiểm tra lại.");
+      }
       //Debug line
-      setStatus(
-        error.reason ||
-        error.shortMessage ||
-        error.message ||
-        JSON.stringify(error)
-      );
+      // setStatus(
+      //   error.reason ||
+      //   error.shortMessage ||
+      //   error.message ||
+      //   JSON.stringify(error)
+      // );
     }
   }
 
@@ -257,26 +257,26 @@ function App() {
       <h1>Bank dApp</h1>
 
       <button onClick={connectWallet}>
-        {account ? "Wallet Connected" : "Connect Wallet"}
+        {account ? "Ví đã kết nối" : "Kết nối tới ví"}
       </button>
 
       <hr />
 
       <p>
-        <strong>Your account:</strong>{" "}
-        {account || "Not connected"}
+        <strong>Tài khoản của bạn:</strong>{" "}
+        {account || "Chưa kết nối"}
       </p>
 
       <p>
-        <strong>Wallet ETH balance:</strong> {walletBalance} ETH
+        <strong>Số dư trong ví (ETH):</strong> {walletBalance} ETH
       </p>
 
       <p>
-        <strong>Your Bank balance:</strong> {bankBalance} ETH
+        <strong>Số dư trong bank:</strong> {bankBalance} ETH
       </p>
 
       <p>
-        <strong>Contract total balance:</strong> {contractBalance} ETH
+        <strong>Tổng số dư của smart contract:</strong> {contractBalance} ETH
       </p>
 
       <button onClick={() => loadBalances()}>
@@ -300,40 +300,40 @@ function App() {
 
 
       {/* KHU VỰC NẠP / RÚT TIỀN */}
-      <h3>Deposit / Withdraw</h3>
+      <h3>Nạp / Rút</h3>
       <div style={{ marginBottom: "20px" }}>
         <input
           type="text"
-          placeholder="Amount in ETH"
+          placeholder="Số lượng (ETH)"
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
           style={{ padding: "8px", marginRight: "8px" }}
         />
-        <button onClick={deposit}>Deposit</button>
+        <button onClick={deposit}>Nạp tiền</button>
         <button onClick={withdraw} style={{ marginLeft: "8px" }}>
-          Withdraw
+          Rút tiền
         </button>
       </div>
 
       {/* KHU VỰC CHUYỂN TIỀN NỘI BỘ (MỚI THÊM) */}
-      <h3>Internal Transfer</h3>
-      <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxWidth: "350px", marginBottom: "20px" }}>
+      <h3>Chuyển tiền nội bộ</h3>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px", maxWidth: "350px", width: "100%", margin: "0 auto 20px auto", }}>
         <input
           type="text"
-          placeholder="Recipient Address (0x...)"
+          placeholder="Địa chỉ người nhận (0x...)"
           value={transferTo}
           onChange={(e) => setTransferTo(e.target.value)}
-          style={{ padding: "8px" }}
+          style={{ padding: "8px", width: "100%", boxSizing: "border-box", }}
         />
         <input
           type="text"
-          placeholder="Amount in ETH"
+          placeholder="Số lượng (ETH)"
           value={transferAmount}
           onChange={(e) => setTransferAmount(e.target.value)}
-          style={{ padding: "8px" }}
+          style={{ padding: "8px", width: "100%", boxSizing: "border-box", }}
         />
-        <button onClick={transferInternal} style={{ padding: "8px" }}>
-          Transfer Now
+        <button onClick={transferInternal} style={{ padding: "8px", width: "100%", }}>
+          Chuyển tiền
         </button>
       </div>
 
@@ -341,12 +341,12 @@ function App() {
       <hr />
       
       <p>
-        <strong>Status:</strong> {status}
+        <strong>Trạng thái:</strong> {status}
       </p>
 
       {txHash && (
         <p>
-          <strong>Last transaction:</strong> {txHash}
+          <strong>Giao dịch cuối:</strong> {txHash}
         </p>
       )}
 

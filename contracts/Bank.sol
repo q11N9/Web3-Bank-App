@@ -10,7 +10,7 @@ contract Bank {
     event Transferred(address indexed from, address indexed to, uint256 amount);
 
     function deposit() external payable {
-        require(msg.value > 0, "Deposit amount must be greater than 0");
+        require(msg.value > 0, "Lượng tiền gửi phải lớn hơn 0");
 
         balances[msg.sender] += msg.value;
 
@@ -18,8 +18,8 @@ contract Bank {
     }
 
     function withdraw(uint256 amount) external {
-        require(amount > 0, "Withdraw amount must be greater than 0");
-        require(balances[msg.sender] >= amount, "Insufficient balance");
+        require(amount > 0, "Lượng tiền rút phải lớn hơn 0");
+        require(balances[msg.sender] >= amount, "Số dư không đủ");
 
         balances[msg.sender] -= amount;
 
@@ -30,11 +30,11 @@ contract Bank {
 
     function transfer(address to, uint256 amount) external {
 
-        require(to != address(0), "Cannot transfer to the zero address");
-        require(to != msg.sender, "Cannot transfer to yourself");
-        require(amount > 0, "Transfer amount must be greater than 0");
+        require(to != address(0), "Không thể chuyển tiền tới địa chỉ rỗng");
+        require(to != msg.sender, "Không thể tự chuyển tiền cho bản thân");
+        require(amount > 0, "Lượng tiền chuyển phải lớn hơn 0");
         
-        require(balances[msg.sender] >= amount, "Insufficient balance");
+        require(balances[msg.sender] >= amount, "Số dư không đủ");
         balances[msg.sender] -= amount;
 
         balances[to] += amount;
